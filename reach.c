@@ -23,6 +23,8 @@ int up, left, right;
 int duty_cycle;
 int distance;
 int time_taken;
+int start = 0; // when zero thus no location is defined so car no move, when 1 then we start the main code
+int reach = 0; // when 1 then the car has reached the location and it must stop, initially it is zero
 
 // functions decleration  
 void PWM_Init(int x);
@@ -185,7 +187,15 @@ void main(void) {
     
     
     while(1){
-        
+        while(start == 1){
+            forward();
+            __delay_ms(100);
+            up = up - 100;
+            calculate_distance();
+            if(distance <= 5)
+                avoid();
+            
+        }
     }
     return;
 }
