@@ -22,7 +22,7 @@
 int up, left, right;
 int duty_cycle;
 int distance;
-int time_takes;
+int time_taken;
 
 // functions decleration  
 void PWM_Init(int x);
@@ -30,10 +30,11 @@ void avoid();
 void back_off();
 void forward();
 void stop();
-void recentre_left();
-void recentre_right();
+void recenter_left();
+void recenter_right();
 void turn_left();
 void turn_right();
+void calculate_distance();
 
 
 // function initialization 
@@ -71,6 +72,7 @@ void back_off(){
     RC4=0; RC5=1; //Motor 1 reverse (right motor)
     RC6=0; RC7=1; //Motor 2 reverse (left motor)
     __delay_ms(500);
+    up = up + 500; // to add this to the path needed to be done
     
     stop(); // stop the car
     __delay_ms(500); // stop the car, just standby period
@@ -102,26 +104,84 @@ void turn_right(){
     __delay_ms(500);
 }
 
-// recentre left function 
-void recentre_left(){
+// recentre left function, to recenter after turning left
+void recenter_left(){
     while(RD2 == 1){
         forward();
+        __delay_ms(100);
+        left = left + 100;
     }
     stop(); // stop the car for standby period then recentre the car
     turn_right(); // turn the car right so now it has the same reference 
     
 }
 
-// recentre right funciton, to recentere the car after turning right
-void recentre_right(){
+// recentre right function, to recentere the car after turning right
+void recenter_right(){
     while(RD3 == 1){
         forward();
+        __delay_ms(100);
+        right = right + 100;
     }
     stop(); // standby period 
     turn_left(); // turn the car left so now it has the same reference as before
 }
 
+void avoid(){
+    // if left sensor is blocked, then turn right
+    if (RD2 == 0 && RD3 == 1){
+        back_off();
+        turn_right();
+        recenter_right();
+    }
+    
+    // if right sensor is blocked then turn left
+    if(RD2 == 1 && RD3 == 0){
+        back_off();
+        turn_left();
+        recenter_left();
+    }
+    
+    // if both sensors are open then to turn right, although turn left will also do the job
+    if(RD2 == 0 && RD3 == 0){
+        back_off();
+        turn_right();
+        recenter_right();
+    }
+    
+    //if both sensors are blocked, then to move backward till a path open
+    if(RD2 == 1 && RD3 == 1){
+        // to go back till find an open path
+        while(RD2 == 1 && RD3 == 1){
+            back_off();
+        }
+        // it go out of the loop when a path is open, so to check which path is open
+        // if the right path is open, then turn right and recenter right
+        if(RD2 == 0){
+            turn_right();
+            recenter_right();
+        }
+        // if the left path is open, then turn left and recenter left
+        if(RD3 == 0){
+            turn_left();
+            recenter_left();
+        }
+    }
+    
+}
+
 void main(void) {
+    // ultra sonic pins configuration 
+    TRISB1 = 0; //Trigger pin of US sensor is sent as output pin
+    TRISB2 = 1; //Echo pin of US sensor is set as input pin
+    
+    // IR sensors pins configuration 
+    TRISD2 = 1; // right sensor, defined as input pin, when high there is obstacle
+    TRISD3 = 1; // left sensor, defined as input pin, when high there is obstacle
+    
+    // pins configuration for the motors 
+    TRISC4 = 0; TRISC5 = 0; //Motor 1 (right motor) pins declared as output
+    TRISC6 = 0; TRISC7 = 0; //Motor 2 (left motor) pins declared as output
     
     
     while(1){
