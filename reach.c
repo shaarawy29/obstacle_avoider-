@@ -19,7 +19,7 @@
 #include <xc.h>
 
 // global variables decleration
-int forward, left, right;
+int up, left, right;
 int duty_cycle;
 int distance;
 int time_takes;
@@ -28,6 +28,8 @@ int time_takes;
 void PWM_Init(int x);
 void avoid();
 void back_off();
+void forward();
+void stop();
 void recentre_left();
 void recentre_right();
 void turn_left();
@@ -58,15 +60,26 @@ void PWM_Init(int x)
   CCPR1L = x >> 2;
 }
 
+// forward function 
+void forward(){
+    RC4=1; RC5=0; //Motor 1 forward (right motor)
+    RC6=1; RC7=0; //Motor 2 forward (left motor)
+}
+
 // back_off function initialiation 
 void back_off(){
     RC4=0; RC5=1; //Motor 1 reverse (right motor)
     RC6=0; RC7=1; //Motor 2 reverse (left motor)
     __delay_ms(500);
     
-    RC4=0; RC5=0; //Motor 1 reverse (right motor)
-    RC6=0; RC7=0; //Motor 2 reverse (left motor)
+    stop(); // stop the car
     __delay_ms(500); // stop the car, just standby period
+}
+
+// stop function to stop the car
+void stop(){
+    RC4 = 0; RC5 = 0; // Motor 1 stop (right motor)
+    RC6=0; RC7=0; //Motor 2 stop (left motor)
 }
 
 //turn left function 
@@ -75,7 +88,7 @@ void turn_left(){
     RC6=0; RC7=0; //Motor 2 stop (left motor)
     __delay_ms(500);
   
-    RC4 = 0; RC5 = 0; // stop the right motor also, just standby period
+    stop(); // stop the car, standby period
     __delay_ms(500);
 }
 
@@ -85,8 +98,27 @@ void turn_right(){
     RC6=1; RC7=0; //Motor 2 forward (left motor)
     __delay_ms(500);
     
-    RC6 = 0; RC7 = 0; // stop the left motor also, standby period
+    stop(); // stop the car, just standby period
     __delay_ms(500);
+}
+
+// recentre left function 
+void recentre_left(){
+    while(RD2 == 1){
+        forward();
+    }
+    stop(); // stop the car for standby period then recentre the car
+    turn_right(); // turn the car right so now it has the same reference 
+    
+}
+
+// recentre right funciton, to recentere the car after turning right
+void recentre_right(){
+    while(RD3 == 1){
+        forward();
+    }
+    stop(); // standby period 
+    turn_left(); // turn the car left so now it has the same reference as before
 }
 
 void main(void) {
