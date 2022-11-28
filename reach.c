@@ -37,6 +37,7 @@ void recenter_right();
 void turn_left();
 void turn_right();
 void calculate_distance();
+void reverse();
 
 
 // function initialization 
@@ -67,6 +68,12 @@ void PWM_Init(int x)
 void forward(){
     RC4=1; RC5=0; //Motor 1 forward (right motor)
     RC6=1; RC7=0; //Motor 2 forward (left motor)
+}
+
+//reverse function
+void reverse(){
+    RC4=0; RC5=1; //Motor 1 reverse (right motor)
+    RC6=0; RC7=1; //Motor 2 reverse (left motor)
 }
 
 // back_off function initialiation 
@@ -184,10 +191,14 @@ void main(void) {
     // pins configuration for the motors 
     TRISC4 = 0; TRISC5 = 0; //Motor 1 (right motor) pins declared as output, Rc4=> in1 Rc5=> in2
     TRISC6 = 0; TRISC7 = 0; //Motor 2 (left motor) pins declared as output, Rc6 => in3 Rc7 =>in4
+    PORTC =0;
+    // pin for the forward IR sensor 
+    TRISD4 = 1; // forward IR sensor, if low then object in fron of the car
     
+    PWM_Init(45);
     
     while(1){
-        while(start == 1){
+        /*while(start == 1){
             forward();
             __delay_ms(100);
             up = up - 100;
@@ -211,9 +222,11 @@ void main(void) {
                 left = 0;
             }
             
-        }
-        back_off();
-        __delay_ms(2000);
+        }*/
+        if(RD4 == 0)
+            stop();
+        else
+            forward();
     }
     return;
 }
