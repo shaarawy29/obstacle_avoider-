@@ -108,7 +108,7 @@ void turn_right(){
 
 // recentre left function, to recenter after turning left
 void recenter_left(){
-    while(RD2 == 1){
+    while(RD3 == 0){
         forward();
         __delay_ms(100);
         left = left + 100;
@@ -120,7 +120,7 @@ void recenter_left(){
 
 // recentre right function, to recentere the car after turning right
 void recenter_right(){
-    while(RD3 == 1){
+    while(RD2 == 0){
         forward();
         __delay_ms(100);
         right = right + 100;
@@ -145,26 +145,26 @@ void avoid(){
     }
     
     // if both sensors are open then to turn right, although turn left will also do the job
-    if(RD2 == 0 && RD3 == 0){
+    if(RD2 == 1 && RD3 == 1){
         back_off();
         turn_right();
         recenter_right();
     }
     
     //if both sensors are blocked, then to move backward till a path open
-    if(RD2 == 1 && RD3 == 1){
+    if(RD2 == 0 && RD3 == 0){
         // to go back till find an open path
-        while(RD2 == 1 && RD3 == 1){
+        while(RD2 == 0 && RD3 == 0){
             back_off();
         }
         // it go out of the loop when a path is open, so to check which path is open
         // if the right path is open, then turn right and recenter right
-        if(RD2 == 0){
+        if(RD3 == 1){
             turn_right();
             recenter_right();
         }
         // if the left path is open, then turn left and recenter left
-        if(RD3 == 0){
+        if(RD2 == 1){
             turn_left();
             recenter_left();
         }
@@ -178,16 +178,16 @@ void main(void) {
     TRISB2 = 1; //Echo pin of US sensor is set as input pin
     
     // IR sensors pins configuration 
-    TRISD2 = 1; // right sensor, defined as input pin, when high there is obstacle
-    TRISD3 = 1; // left sensor, defined as input pin, when high there is obstacle
+    TRISD2 = 1; // left sensor, defined as input pin, when low there is obstacle
+    TRISD3 = 1; // right sensor, defined as input pin, when low there is obstacle
     
     // pins configuration for the motors 
-    TRISC4 = 0; TRISC5 = 0; //Motor 1 (right motor) pins declared as output
-    TRISC6 = 0; TRISC7 = 0; //Motor 2 (left motor) pins declared as output
+    TRISC4 = 0; TRISC5 = 0; //Motor 1 (right motor) pins declared as output, Rc4=> in1 Rc5=> in2
+    TRISC6 = 0; TRISC7 = 0; //Motor 2 (left motor) pins declared as output, Rc6 => in3 Rc7 =>in4
     
     
     while(1){
-        while(start == 1){
+        /*while(start == 1){
             forward();
             __delay_ms(100);
             up = up - 100;
@@ -195,7 +195,9 @@ void main(void) {
             if(distance <= 5)
                 avoid();
             
-        }
+        }*/
+        back_off();
+        __delay_ms(2000);
     }
     return;
 }
