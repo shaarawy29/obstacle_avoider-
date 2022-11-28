@@ -187,15 +187,31 @@ void main(void) {
     
     
     while(1){
-        /*while(start == 1){
+        while(start == 1){
             forward();
             __delay_ms(100);
             up = up - 100;
             calculate_distance();
             if(distance <= 5)
                 avoid();
+            if(up < 100 && left < 100 && right < 100){
+                start = 0;
+                stop();
+            }
+            if(up < 100){
+                if(left > right){
+                    up = left - right;
+                    turn_left();
+                }
+                if(right > left){
+                    up = right - left;
+                    turn_right();
+                }
+                right = 0;
+                left = 0;
+            }
             
-        }*/
+        }
         back_off();
         __delay_ms(2000);
     }
