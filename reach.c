@@ -25,9 +25,11 @@ int distance;
 int time_taken;
 int start = 0; // when zero thus no location is defined so car no move, when 1 then we start the main code
 int reach = 0; // when 1 then the car has reached the location and it must stop, initially it is zero
+int test_pwm = 0;
 
 // functions decleration  
-void PWM_Init(int x);
+void PWM_Init();
+void set_DC(int x);
 void avoid();
 void back_off();
 void forward();
@@ -43,7 +45,7 @@ void reverse();
 // function initialization 
 
 // PMW function
-void PWM_Init(int x)
+void PWM_Init()
 {
     //////////////// the function is tested and it is working //////////////////////
     // for this config the max DC is 200 which gives full power
@@ -58,7 +60,11 @@ void PWM_Init(int x)
   T2CKPS1 = 0;
   // Start CCP1 PWM !
   TMR2ON = 1;
-  // set the ducty cycle 
+}
+
+// function to set the duty cycle of the pwm 
+void set_DC(int x){
+   // set the ducty cycle 
   CCP1Y = x & 1;
   CCP1X = x & 2;
   CCPR1L = x >> 2;
@@ -195,7 +201,7 @@ void main(void) {
     // pin for the forward IR sensor 
     TRISD4 = 1; // forward IR sensor, if low then object in fron of the car
     
-    PWM_Init(45);
+    PWM_Init();
     
     while(1){
         /*while(start == 1){
@@ -223,10 +229,13 @@ void main(void) {
             }
             
         }*/
-        if(RD4 == 0)
-            stop();
+        if(test_pwm > 200)
+            test_pwm = 0;
         else
-            forward();
+            test_pwm += 5;
+        forward();
+        set_DC(test_pwm);
+        __delay_ms(1000);
     }
     return;
 }
