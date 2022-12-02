@@ -86,23 +86,24 @@ void tmr1_init(){
 
 // function to calculate the distance 
 int cal_dist(){
-  int distance=0;
-  //TMR1ON = 0;
-  TMR1=0;
-  // Send Trigger Pulse To The Sensor
-  RB1 = 1;
-  __delay_us(10);
-  RB1 = 0;
-  // Wait For The Echo Pulse From The Sensor
-  while(!RB2);
-  // Turn ON Timer Module
-  TMR1ON = 1;
-  // Wait Until The Pulse Ends
-  while(RB2);
-  // Turn OFF The Timer
-  TMR1ON=0;
-  // Calculate The Distance Using The Equation
-  distance = TMR1/117.6;
+    int distance=0;
+    TMR1ON = 0;
+    TMR1=0;
+    // Send Trigger Pulse To The Sensor
+    RB1 = 1;
+    __delay_us(10);
+    RB1 = 0;
+    // Wait For The Echo Pulse From The Sensor
+    /*while(!RB2);
+    // Turn ON Timer Module
+    TMR1ON = 1;
+    // Wait Until The Pulse Ends
+    while(RB2);
+    // Turn OFF The Timer
+    TMR1ON=0;*/
+    __delay_ms(100);
+    // Calculate The Distance Using The Equation
+    distance = TMR1/117.6;
   return distance;
 }
 
@@ -225,7 +226,10 @@ void main(void) {
     // ultra sonic pins configuration 
     TRISB1 = 0; //Trigger pin of US sensor is sent as output pin
     RB1 = 0; // initially zero
-    TRISB2 = 1; //Echo pin of US sensor is set as input pin
+    TRISB4 = 1; //Echo pin of US sensor is set as input pin
+    
+    TRISB3 = 0;
+    RB3 = 0;
     
     // IR sensors pins configuration 
     TRISD2 = 1; // left sensor, defined as input pin, when low there is obstacle
@@ -240,6 +244,10 @@ void main(void) {
     
     //PWM_Init();
     tmr1_init();
+    
+    GIE = 1;   //Global Interrupt Enable
+    RBIF = 0;  //Clear PORTB On-Change Interrupt Flag
+    RBIE = 1;  //Enable PORTB On-Change Interrupt
     
     while(1){
         /*while(start == 1){
@@ -268,11 +276,32 @@ void main(void) {
             
         }*/
         dist = cal_dist();
-        if(dist < 10)
-            RC4 = 1;
-        else 
+        if(dist < 10){
+            stop();
             RC4 = 0;
-        __delay_ms(100);
+            
+        }
+        else {
+            forward();
+            RC4 = 1;
+        }
+        //__delay_ms(100);
     }
     return;
+}
+
+void __interrupt() ISR(void){
+    
+    //Makes sure that it is PORTB On-Change Interrupt
+    if(RBIF == 1){
+        RBIE = 0;       //Disable On-Change Interrupt
+        if(RB4 == 1)   //If ECHO is HIGH
+            TMR1ON = 1;    //Start Timer
+        //If ECHO is LOW
+        if(RB4 == 0){    
+            TMR1ON = 0; //Stop Timer
+    }
+        RBIF = 0;  //Clear PORTB On-Change Interrupt flag
+        RBIE = 1; //Enable PORTB On-Change Interrupt
+  }
 }
