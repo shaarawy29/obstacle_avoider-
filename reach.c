@@ -18,10 +18,13 @@
 #define _XTAL_FREQ 8000000
 #include <xc.h>
 
+//#define trigger RB1
+//#define echo    RB2
+
 // global variables decleration
 int up, left, right;
 int duty_cycle;
-int distance;
+int dist;
 int time_taken;
 int start = 0; // when zero thus no location is defined so car no move, when 1 then we start the main code
 int reach = 0; // when 1 then the car has reached the location and it must stop, initially it is zero
@@ -40,6 +43,8 @@ void turn_left();
 void turn_right();
 void calculate_distance();
 void reverse();
+void tmr1_init();
+int cal_dist();
 
 
 // function initialization 
@@ -68,6 +73,37 @@ void set_DC(int x){
   CCP1Y = x & 1;
   CCP1X = x & 2;
   CCPR1L = x >> 2;
+}
+
+// tmr_init function to initialize timer 1 to be used with cal dis method 
+void tmr1_init(){
+    // Clear The Pre-Scaler Select Bits
+  T1CKPS0=0;
+  T1CKPS1=0;
+  // Choose The Local Clock As Clock Source
+  TMR1CS=0;
+}
+
+// function to calculate the distance 
+int cal_dist(){
+  int distance=0;
+  //TMR1ON = 0;
+  TMR1=0;
+  // Send Trigger Pulse To The Sensor
+  RB1 = 1;
+  __delay_us(10);
+  RB1 = 0;
+  // Wait For The Echo Pulse From The Sensor
+  while(!RB2);
+  // Turn ON Timer Module
+  TMR1ON = 1;
+  // Wait Until The Pulse Ends
+  while(RB2);
+  // Turn OFF The Timer
+  TMR1ON=0;
+  // Calculate The Distance Using The Equation
+  distance = TMR1/117.6;
+  return distance;
 }
 
 // forward function 
@@ -188,6 +224,7 @@ void avoid(){
 void main(void) {
     // ultra sonic pins configuration 
     TRISB1 = 0; //Trigger pin of US sensor is sent as output pin
+    RB1 = 0; // initially zero
     TRISB2 = 1; //Echo pin of US sensor is set as input pin
     
     // IR sensors pins configuration 
@@ -201,7 +238,8 @@ void main(void) {
     // pin for the forward IR sensor 
     TRISD4 = 1; // forward IR sensor, if low then object in fron of the car
     
-    PWM_Init();
+    //PWM_Init();
+    tmr1_init();
     
     while(1){
         /*while(start == 1){
@@ -229,13 +267,12 @@ void main(void) {
             }
             
         }*/
-        if(test_pwm > 200)
-            test_pwm = 0;
-        else
-            test_pwm += 5;
-        forward();
-        set_DC(test_pwm);
-        __delay_ms(1000);
+        dist = cal_dist();
+        if(dist < 10)
+            RC4 = 1;
+        else 
+            RC4 = 0;
+        __delay_ms(100);
     }
     return;
 }
