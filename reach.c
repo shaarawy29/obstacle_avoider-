@@ -241,7 +241,8 @@ void main(void) {
     // pin for the forward IR sensor 
     TRISD4 = 1; // forward IR sensor, if low then object in fron of the car
     
-    //PWM_Init();
+    PWM_Init();
+    set_DC(50);
     tmr1_init();
     
     while(1){
@@ -270,12 +271,13 @@ void main(void) {
             }
             
         }*/
-        dist = cal_dist();
-        if(dist < 10)
-            RC4 = 0;
-        else 
-            RC4 = 1;
-        __delay_ms(100);
+        if (RD4 == 0){
+            stop();
+        }
+        if(RD4 == 1){
+            set_DC(50);
+            forward();
+        }
     }
     return;
 }
