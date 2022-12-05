@@ -29,7 +29,6 @@ int time_taken;
 int start = 0; // when zero thus no location is defined so car no move, when 1 then we start the main code
 int reach = 0; // when 1 then the car has reached the location and it must stop, initially it is zero
 int test_pwm = 0;
-int test_US;
 
 // functions decleration  
 void PWM_Init();
@@ -79,35 +78,33 @@ void set_DC(int x){
 // tmr_init function to initialize timer 1 to be used with cal dis method 
 void tmr1_init(){
     // Clear The Pre-Scaler Select Bits
-  T1CKPS0=0;
-  T1CKPS1=0;
+  //T1CKPS0=0;
+  //T1CKPS1=0;
   // Choose The Local Clock As Clock Source
-  TMR1CS=0;
+  //TMR1CS=0;
+    T1CON = 0x10;
 }
 
 // function to calculate the distance 
 int cal_dist(){
-    int distance=0;
-    TMR1ON = 0;
-    TMR1=0;
-    // Send Trigger Pulse To The Sensor
-    RB1 = 0;
-    __delay_us(5);
-    RB1 = 1;
-    __delay_us(10);
-    RB1 = 0;
-    // Wait For The Echo Pulse From The Sensor
-    /*while(!RB2);
-    // Turn ON Timer Module
-    TMR1ON = 1;
-    // Wait Until The Pulse Ends
-    while(RB2);
-    // Turn OFF The Timer
-    TMR1ON=0;*/
-    __delay_ms(100);
-    test_US = TMR1;
-    // Calculate The Distance Using The Equation
-    distance = (int)(test_US/117.6);
+  int distance=0;
+  //TMR1ON = 0;
+  TMR1=0;
+  // Send Trigger Pulse To The Sensor
+  RD5 = 1;
+  __delay_us(10);
+  RD5 = 0;
+  // Wait For The Echo Pulse From The Sensor
+  while(!RD6);
+  // Turn ON Timer Module
+  TMR1ON = 1;
+  // Wait Until The Pulse Ends
+  while(RD6);
+  // Turn OFF The Timer
+  TMR1ON=0;
+  // Calculate The Distance Using The Equation
+  distance = (TMR1L | (TMR1H<<8));
+  distance = distance/58.82;
   return distance;
 }
 
@@ -228,12 +225,10 @@ void avoid(){
 
 void main(void) {
     // ultra sonic pins configuration 
-    TRISB1 = 0; //Trigger pin of US sensor is sent as output pin
-    RB1 = 0; // initially zero
-    TRISB4 = 1; //Echo pin of US sensor is set as input pin
-    
-    TRISB3 = 0;
-    RB3 = 0;
+    TRISD5 = 0; //Trigger pin of US sensor is sent as output pin
+    RD5 = 0; // initially zero
+    TRISD6 = 1; //Echo pin of US sensor is set as input pin
+    RD6 = 0;
     
     // IR sensors pins configuration 
     TRISD2 = 1; // left sensor, defined as input pin, when low there is obstacle
@@ -246,12 +241,9 @@ void main(void) {
     // pin for the forward IR sensor 
     TRISD4 = 1; // forward IR sensor, if low then object in fron of the car
     
-    //PWM_Init();
+    PWM_Init();
+    set_DC(50);
     tmr1_init();
-    
-    GIE = 1;   //Global Interrupt Enable
-    RBIF = 0;  //Clear PORTB On-Change Interrupt Flag
-    RBIE = 1;  //Enable PORTB On-Change Interrupt
     
     while(1){
         /*while(start == 1){
@@ -279,33 +271,13 @@ void main(void) {
             }
             
         }*/
-        dist = cal_dist();
-        if(dist < 10){
+        set_DC(50);
+        if (RD4 == 0){
             stop();
-            RC4 = 0;
-            
         }
-        else {
+        if(RD4 == 1){
             forward();
-            RC4 = 1;
         }
-        //__delay_ms(100);
     }
     return;
-}
-
-void __interrupt() ISR(void){
-    
-    //Makes sure that it is PORTB On-Change Interrupt
-    if(RBIF == 1){
-        //RBIE = 0;       //Disable On-Change Interrupt
-        if(RB4 == 1)   //If ECHO is HIGH
-            TMR1ON = 1;    //Start Timer
-        //If ECHO is LOW
-        if(RB4 == 0){    
-            TMR1ON = 0; //Stop Timer
-    }
-        RBIF = 0;  //Clear PORTB On-Change Interrupt flag
-        //RBIE = 1; //Enable PORTB On-Change Interrupt
-  }
 }
