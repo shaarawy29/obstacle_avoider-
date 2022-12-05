@@ -124,11 +124,11 @@ void reverse(){
 void back_off(){
     RC4=0; RC5=1; //Motor 1 reverse (right motor)
     RC6=0; RC7=1; //Motor 2 reverse (left motor)
-    __delay_ms(500);
-    up = up + 500; // to add this to the path needed to be done
+    __delay_ms(200);
+    up = up + 200; // to add this to the path needed to be done
     
     stop(); // stop the car
-    __delay_ms(500); // stop the car, just standby period
+    __delay_ms(200); // stop the car, just standby period
 }
 
 // stop function to stop the car
@@ -141,20 +141,20 @@ void stop(){
 void turn_left(){
     RC4=1; RC5=0; //Motor 1 forward (right motor)
     RC6=0; RC7=0; //Motor 2 stop (left motor)
-    __delay_ms(500);
+    __delay_ms(300);
   
     stop(); // stop the car, standby period
-    __delay_ms(500);
+    __delay_ms(300);
 }
 
 // turn right function 
 void turn_right(){
     RC4=0; RC5=0; //Motor 1 stop (right motor)
     RC6=1; RC7=0; //Motor 2 forward (left motor)
-    __delay_ms(500);
+    __delay_ms(300);
     
     stop(); // stop the car, just standby period
-    __delay_ms(500);
+    __delay_ms(300);
 }
 
 // recentre left function, to recenter after turning left
@@ -162,9 +162,10 @@ void recenter_left(){
     while(RD3 == 0){
         forward();
         __delay_ms(100);
-        left = left + 100;
+        right = right + 100;
     }
     stop(); // stop the car for standby period then recentre the car
+    __delay_ms(300);
     turn_right(); // turn the car right so now it has the same reference 
     
 }
@@ -174,9 +175,10 @@ void recenter_right(){
     while(RD2 == 0){
         forward();
         __delay_ms(100);
-        right = right + 100;
+        left = left + 100;
     }
     stop(); // standby period 
+    __delay_ms(300);
     turn_left(); // turn the car left so now it has the same reference as before
 }
 
@@ -245,17 +247,18 @@ void main(void) {
     set_DC(50);
     tmr1_init();
     
-    up = 3000;
-    start = 1;
+    //up = 30000;
+    //start = 1;
     while(1){
-        while(start == 1){
-            set_DC(60);
+        /*while(start == 1){
+            set_DC(50);
             forward();
             __delay_ms(100);
             up = up - 100;
             //calculate_distance();
             if(RD4 == 0){
                 stop();
+                __delay_ms(100);
                 avoid();
             }
             if(up <= 100 && left <= 100 && right <= 100){
@@ -275,7 +278,17 @@ void main(void) {
                 left = 0;
             }
             
-        }
+        }*/
+        set_DC(50);
+            forward();
+            __delay_ms(100);
+            up = up - 100;
+            //calculate_distance();
+            if(RD4 == 0){
+                stop();
+                __delay_ms(100);
+                avoid();
+            }
     }
     return;
 }
