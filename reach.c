@@ -245,19 +245,24 @@ void main(void) {
     set_DC(50);
     tmr1_init();
     
+    up = 3000;
+    start = 1;
     while(1){
-        /*while(start == 1){
+        while(start == 1){
+            set_DC(60);
             forward();
             __delay_ms(100);
             up = up - 100;
-            calculate_distance();
-            if(distance <= 5)
+            //calculate_distance();
+            if(RD4 == 0){
+                stop();
                 avoid();
-            if(up < 100 && left < 100 && right < 100){
+            }
+            if(up <= 100 && left <= 100 && right <= 100){
                 start = 0;
                 stop();
             }
-            if(up < 100){
+            if(up <= 100){
                 if(left > right){
                     up = left - right;
                     turn_left();
@@ -270,13 +275,6 @@ void main(void) {
                 left = 0;
             }
             
-        }*/
-        set_DC(50);
-        if (RD4 == 0){
-            stop();
-        }
-        if(RD4 == 1){
-            forward();
         }
     }
     return;
