@@ -31,12 +31,12 @@ int reach = 0; // when 1 then the car has reached the location and it must stop,
 int test_pwm = 0;
 
 // functions decleration  
-void PWM_Init();
+void PWM_Init(void);
 void set_DC(int x);
 void avoid();
 void back_off();
-void forward();
-void stop();
+void forward(void);
+void stop(void);
 void recenter_left();
 void recenter_right();
 void turn_left();
@@ -50,7 +50,7 @@ int cal_dist();
 // function initialization 
 
 // PMW function
-void PWM_Init()
+void PWM_Init(void)
 {
     //////////////// the function is tested and it is working //////////////////////
     // for this config the max DC is 200 which gives full power
@@ -109,7 +109,7 @@ int cal_dist(){
 }
 
 // forward function 
-void forward(){
+void forward(void){
     RC4=1; RC5=0; //Motor 1 forward (right motor)
     RC6=1; RC7=0; //Motor 2 forward (left motor)
 }
@@ -132,7 +132,7 @@ void back_off(){
 }
 
 // stop function to stop the car
-void stop(){
+void stop(void){
     RC4 = 0; RC5 = 0; // Motor 1 stop (right motor)
     RC6=0; RC7=0; //Motor 2 stop (left motor)
 }
@@ -226,29 +226,32 @@ void avoid(){
 }
 
 void main(void) {
-    // ultra sonic pins configuration 
+   /* // ultra sonic pins configuration 
     TRISD5 = 0; //Trigger pin of US sensor is sent as output pin
     RD5 = 0; // initially zero
     TRISD6 = 1; //Echo pin of US sensor is set as input pin
     RD6 = 0;
+    */
     
-    // IR sensors pins configuration 
+  /* // IR sensors pins configuration 
     TRISD2 = 1; // left sensor, defined as input pin, when low there is obstacle
     TRISD3 = 1; // right sensor, defined as input pin, when low there is obstacle
+    */
     
     // pins configuration for the motors 
     TRISC4 = 0; TRISC5 = 0; //Motor 1 (right motor) pins declared as output, Rc4=> in1 Rc5=> in2
     TRISC6 = 0; TRISC7 = 0; //Motor 2 (left motor) pins declared as output, Rc6 => in3 Rc7 =>in4
-    PORTC =0;
+    RC4 = 0;
+    RC5 = 0;
+    RC6 = 0;
+    RC7 = 0;
+    //PORTC =0;
     // pin for the forward IR sensor 
-    TRISD4 = 1; // forward IR sensor, if low then object in fron of the car
-    
+    //TRISD4 = 1; //q forward IR sensor, if low then object in fron of the car
+  
     PWM_Init();
-    set_DC(50);
-    tmr1_init();
+    set_DC(100);
     
-    //up = 30000;
-    //start = 1;
     while(1){
         /*while(start == 1){
             set_DC(50);
@@ -279,16 +282,10 @@ void main(void) {
             }
             
         }*/
-        set_DC(50);
-            forward();
-            __delay_ms(100);
-            up = up - 100;
-            //calculate_distance();
-            if(RD4 == 0){
-                stop();
-                __delay_ms(100);
-                avoid();
-            }
+        forward();
+        __delay_ms(3000);
+        stop();
+        __delay_ms(3000);
     }
     return;
 }
