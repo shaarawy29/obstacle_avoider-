@@ -6,16 +6,16 @@
  */
 
 // CONFIG
-#pragma config FOSC = XT        // Oscillator Selection bits (XT oscillator)
+#pragma config FOSC = HS        // Oscillator Selection bits (XT oscillator)
 #pragma config WDTE = OFF        // Watchdog Timer Enable bit (WDT enabled)
 #pragma config PWRTE = OFF      // Power-up Timer Enable bit (PWRT disabled)
-#pragma config BOREN = OFF       // Brown-out Reset Enable bit (BOR enabled)
+#pragma config BOREN = ON       // Brown-out Reset Enable bit (BOR enabled)
 #pragma config LVP = ON         // Low-Voltage (Single-Supply) In-Circuit Serial Programming Enable bit (RB3/PGM pin has PGM function; low-voltage programming enabled)
 #pragma config CPD = OFF        // Data EEPROM Memory Code Protection bit (Data EEPROM code protection off)
 #pragma config WRT = OFF        // Flash Program Memory Write Enable bits (Write protection off; all program memory may be written to by EECON control)
 #pragma config CP = OFF         // Flash Program Memory Code Protection bit (Code protection off)
 
-#define _XTAL_FREQ 8000000
+#define _XTAL_FREQ 16000000
 #include <xc.h>
 
 //#define trigger RB1
@@ -32,19 +32,21 @@ int test_pwm = 0;
 
 // functions decleration  
 void PWM_Init(void);
+void PWM_right_init(void);
 void set_DC(int x);
-void avoid();
-void back_off();
+void set_DC_right(int x);
+void avoid(void);
+void back_off(void);
 void forward(void);
 void stop(void);
-void recenter_left();
-void recenter_right();
-void turn_left();
-void turn_right();
-void calculate_distance();
-void reverse();
-void tmr1_init();
-int cal_dist();
+void recenter_left(void);
+void recenter_right(void);
+void turn_left(void);
+void turn_right(void);
+void calculate_distance(void);
+void reverse(void);
+void tmr1_init(void);
+int cal_dist(void);
 
 
 // function initialization 
@@ -59,7 +61,25 @@ void PWM_Init(void)
   CCP1M2 = 1;
   TRISC2 = 0; // The CCP1 Output Pin (PWM)
   // Set The PWM Frequency (10kHz)
-  PR2 = 49;
+  PR2 = 99;
+  // Set The PS For Timer2 (1:4 Ratio)
+  T2CKPS0 = 1;
+  T2CKPS1 = 0;
+  // Start CCP1 PWM !
+  TMR2ON = 1;
+}
+
+// function to generate the pwm signal for the right motor (slow one)
+void PWM_right_init(void)
+{
+    //////////////// the function is tested and it is working //////////////////////
+   // for this config the max DC is 400 which gives full power
+  //--[ Configure The CCP Module For PWM Mode ]--
+  CCP2M3 = 1;
+  CCP2M2 = 1;
+  TRISC1 = 0; // The CCP1 Output Pin (PWM)
+  // Set The PWM Frequency (10kHz)
+  PR2 = 99;
   // Set The PS For Timer2 (1:4 Ratio)
   T2CKPS0 = 1;
   T2CKPS1 = 0;
@@ -75,18 +95,26 @@ void set_DC(int x){
   CCPR1L = x >> 2;
 }
 
+// function to set the duty cycle of the pwm right motor  
+void set_DC_right(int x){
+   // set the ducty cycle 
+  CCP2Y = x & 1;
+  CCP2X = x & 2;
+  CCPR2L = x >> 2;
+}
+
 // tmr_init function to initialize timer 1 to be used with cal dis method 
 void tmr1_init(){
     // Clear The Pre-Scaler Select Bits
-  //T1CKPS0=0;
-  //T1CKPS1=0;
+  T1CKPS0=0;
+  T1CKPS1=0;
   // Choose The Local Clock As Clock Source
-  //TMR1CS=0;
-    T1CON = 0x10;
+  TMR1CS=0;
+    //T1CON = 0x10;
 }
 
 // function to calculate the distance 
-int cal_dist(){
+int cal_dist(void){
   int distance=0;
   //TMR1ON = 0;
   TMR1=0;
@@ -104,7 +132,7 @@ int cal_dist(){
   TMR1ON=0;
   // Calculate The Distance Using The Equation
   distance = (TMR1L | (TMR1H<<8));
-  distance = distance/58.82;
+  distance = distance*(0.00425);
   return distance;
 }
 
@@ -115,20 +143,20 @@ void forward(void){
 }
 
 //reverse function
-void reverse(){
+void reverse(void){
     RC4=0; RC5=1; //Motor 1 reverse (right motor)
     RC6=0; RC7=1; //Motor 2 reverse (left motor)
 }
 
 // back_off function initialiation 
-void back_off(){
+void back_off(void){
     RC4=0; RC5=1; //Motor 1 reverse (right motor)
     RC6=0; RC7=1; //Motor 2 reverse (left motor)
-    __delay_ms(200);
-    up = up + 200; // to add this to the path needed to be done
+    __delay_ms(300);
+    up = up + 300; // to add this to the path needed to be done
     
     stop(); // stop the car
-    __delay_ms(200); // stop the car, just standby period
+    __delay_ms(300); // stop the car, just standby period
 }
 
 // stop function to stop the car
@@ -138,27 +166,27 @@ void stop(void){
 }
 
 //turn left function 
-void turn_left(){
+void turn_left(void){
     RC4=1; RC5=0; //Motor 1 forward (right motor)
     RC6=0; RC7=0; //Motor 2 stop (left motor)
-    __delay_ms(300);
+    __delay_ms(500);
   
     stop(); // stop the car, standby period
-    __delay_ms(300);
+    __delay_ms(500);
 }
 
 // turn right function 
-void turn_right(){
+void turn_right(void){
     RC4=0; RC5=0; //Motor 1 stop (right motor)
     RC6=1; RC7=0; //Motor 2 forward (left motor)
-    __delay_ms(300);
+    __delay_ms(500);
     
     stop(); // stop the car, just standby period
-    __delay_ms(300);
+    __delay_ms(500);
 }
 
 // recentre left function, to recenter after turning left
-void recenter_left(){
+void recenter_left(void){
     while(RD3 == 0){
         forward();
         __delay_ms(100);
@@ -171,7 +199,7 @@ void recenter_left(){
 }
 
 // recentre right function, to recentere the car after turning right
-void recenter_right(){
+void recenter_right(void){
     while(RD2 == 0){
         forward();
         __delay_ms(100);
@@ -182,7 +210,7 @@ void recenter_right(){
     turn_left(); // turn the car left so now it has the same reference as before
 }
 
-void avoid(){
+void avoid(void){
     // if left sensor is blocked, then turn right
     if (RD2 == 0 && RD3 == 1){
         back_off();
@@ -226,17 +254,19 @@ void avoid(){
 }
 
 void main(void) {
-   /* // ultra sonic pins configuration 
+    // ultra sonic pins configuration 
     TRISD5 = 0; //Trigger pin of US sensor is sent as output pin
     RD5 = 0; // initially zero
     TRISD6 = 1; //Echo pin of US sensor is set as input pin
     RD6 = 0;
-    */
     
-  /* // IR sensors pins configuration 
+    
+   // IR sensors pins configuration 
     TRISD2 = 1; // left sensor, defined as input pin, when low there is obstacle
     TRISD3 = 1; // right sensor, defined as input pin, when low there is obstacle
-    */
+    RD2 = 0;
+    RD3 = 0;
+    
     
     // pins configuration for the motors 
     TRISC4 = 0; TRISC5 = 0; //Motor 1 (right motor) pins declared as output, Rc4=> in1 Rc5=> in2
@@ -250,42 +280,31 @@ void main(void) {
     //TRISD4 = 1; //q forward IR sensor, if low then object in fron of the car
   
     PWM_Init();
-    set_DC(100);
+    set_DC(240);
+    PWM_right_init();
+    set_DC_right(270);
     
     while(1){
-        /*while(start == 1){
-            set_DC(50);
+        //set_DC(200);
+        dist = cal_dist();
+        if(dist < 10)
+            avoid();
+        else 
             forward();
-            __delay_ms(100);
-            up = up - 100;
-            //calculate_distance();
-            if(RD4 == 0){
-                stop();
-                __delay_ms(100);
-                avoid();
-            }
-            if(up <= 100 && left <= 100 && right <= 100){
-                start = 0;
-                stop();
-            }
-            if(up <= 100){
-                if(left > right){
-                    up = left - right;
-                    turn_left();
-                }
-                if(right > left){
-                    up = right - left;
-                    turn_right();
-                }
-                right = 0;
-                left = 0;
-            }
-            
-        }*/
-        forward();
-        __delay_ms(3000);
+        __delay_ms(50);
+      /*  __delay_ms(1000);
+       // set_DC(75);
+        reverse();
+        __delay_ms(1000);
+       // set_DC(50);
         stop();
-        __delay_ms(3000);
+        __delay_ms(1000);
+       // set_DC(25);
+        turn_right();
+        __delay_ms(1000);
+       // set_DC(0);
+        turn_left();
+        __delay_ms(1000); */
     }
     return;
 }
