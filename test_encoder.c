@@ -107,13 +107,6 @@ void turn_right(void){
 
 void main(void) {
     
-    GIE = 1;      //global interrupt enable
-    TRISB0 = 1;   //setup RB0 as input
-    //RB0 = 0;
-    INTF = 0; //clear interrupt flag bit
-    INTE = 1;
-    INTEDG = 1;   //configure detection of interrupt on rising edge
-    
     right = 0;
     left = 0;
     
@@ -124,6 +117,16 @@ void main(void) {
     RC5 = 0;
     RC6 = 0;
     RC7 = 0;
+         //global interrupt enable
+    TRISB0 = 1;   //setup RB0 as input
+    //RB0 = 0;
+    //INTF = 0; //clear interrupt flag bit
+    
+    INTEDG = 1; '  //configure detection of interrupt on rising edge
+    INTE = 1;
+    GIE = 1;
+    
+
     
     TRISB4 = 1;
     TRISB5 = 1;
@@ -166,6 +169,7 @@ void __interrupt() ISR(void){
         //RBIF = 0;
         right = right + 1;
         left = left + 1;
+        INTF=0;
     }
-    INTF=0;
+    
 }
