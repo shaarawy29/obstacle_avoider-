@@ -22,8 +22,9 @@
 //#define echo    RB2
 
 // global variables decleration
-int up, left, right;
-int duty_cycle;
+int up, left, right; // three variables to hold the position(up how much to go forware)
+int right_encoder, left_encoder; // to hold how many holes passed through the encoder 
+int duty_cycle; 
 int dist;
 int time_taken;
 int start = 0; // when zero thus no location is defined so car no move, when 1 then we start the main code
@@ -254,6 +255,16 @@ void avoid(void){
 }
 
 void main(void) {
+    
+    // enable port B change interrupt to track the distance using optical encoder
+    GIE = 1; // enable general interrupt 
+    RBIE = 1; // enable port B change interrupt
+    RBIF = 0; // to reset the flag of the interrupt
+    
+    TRISB4 = 1; // set RB4 as input pin, to be connected to the right wheel encoder
+    TRISB5 = 1; // set RB5 as input pin, to be connected to the left wheel encoder
+    
+    
     // ultra sonic pins configuration 
     TRISD5 = 0; //Trigger pin of US sensor is sent as output pin
     RD5 = 0; // initially zero
@@ -307,4 +318,16 @@ void main(void) {
         __delay_ms(1000); */
     }
     return;
+}
+
+void __interrupt() ISR(void){
+    
+    // to check that it is port B change interrupt
+    if(RBIF == 1){
+        if(RB4 == 1) // to check if it is the right wheel
+            right_encoder = right_encoder + 1; // increment the right var, holding how many holes passed through encoder
+        if(RB5 == 1) // to check if it is the left wheel 
+            left_encoder = left_encoder + 1; // increment the left var, holding how many holes passed through encoder
+        RBIF = 0; // reset the interrupt flag
+    }
 }
