@@ -23,13 +23,23 @@
 
 // global variables decleration
 int up, left, right; // three variables to hold the position(up how much to go forware)
-int right_encoder, left_encoder; // to hold how many holes passed through the encoder 
+//int right_encoder, left_encoder; // to hold how many holes passed through the encoder 
 int duty_cycle; 
-int dist;
+int forward_dist;
 int time_taken;
 int start = 0; // when zero thus no location is defined so car no move, when 1 then we start the main code
 int reach = 0; // when 1 then the car has reached the location and it must stop, initially it is zero
 int test_pwm = 0;
+
+int up_counts; // var to store how many holes of the shaft were counted at each iteration of the main loop
+int up_flag;
+
+int back_counts; // var to store how many holes of the shaft were counted while going back off
+int back_flag; // var to tell whether we are moving back or not 
+int back_dist; // var to store how far we went back 
+
+int turn_counts; // var to hold how many holes of the shaft were counted while turning (right or left)
+int turn_flag; // flag to tell whether we are truning or not
 
 // functions decleration  
 void PWM_Init(void);
@@ -44,7 +54,7 @@ void recenter_left(void);
 void recenter_right(void);
 void turn_left(void);
 void turn_right(void);
-void calculate_distance(void);
+//void calculate_distance(void);
 void reverse(void);
 void tmr1_init(void);
 int cal_dist(void);
@@ -151,13 +161,23 @@ void reverse(void){
 
 // back_off function initialiation 
 void back_off(void){
-    RC4=0; RC5=1; //Motor 1 reverse (right motor)
-    RC6=0; RC7=1; //Motor 2 reverse (left motor)
-    __delay_ms(300);
-    up = up + 300; // to add this to the path needed to be done
+    reverse();
+    
+    back_dist = 0;
+    back_flag = 1;
+    
+    while(back_dist < 10){
+        __delay_ms(50);
+        back_dist = (back_counts/20)*19;
+    }
+    up = up + back_dist; // to add this to the path needed to be done
+    
+    back_flag = 0;
+    back_dist = 0;
+    back_counts = 0;
     
     stop(); // stop the car
-    __delay_ms(300); // stop the car, just standby period
+    __delay_ms(500); // stop the car, just standby period
 }
 
 // stop function to stop the car
@@ -168,9 +188,17 @@ void stop(void){
 
 //turn left function 
 void turn_left(void){
+    
     RC4=1; RC5=0; //Motor 1 forward (right motor)
     RC6=0; RC7=0; //Motor 2 stop (left motor)
-    __delay_ms(500);
+    
+    turn_counts = 0;
+    turn_flag = 1;
+    
+    while(turn_counts < 20); 
+    
+    turn_counts = 0;
+    turn_flag = 0;
   
     stop(); // stop the car, standby period
     __delay_ms(500);
@@ -178,9 +206,17 @@ void turn_left(void){
 
 // turn right function 
 void turn_right(void){
+    
     RC4=0; RC5=0; //Motor 1 stop (right motor)
     RC6=1; RC7=0; //Motor 2 forward (left motor)
-    __delay_ms(500);
+   
+    turn_counts = 0;
+    turn_flag = 1;
+    
+    while(turn_counts < 20);
+    
+    turn_counts = 0;
+    turn_flag = 0;
     
     stop(); // stop the car, just standby period
     __delay_ms(500);
@@ -188,26 +224,48 @@ void turn_right(void){
 
 // recentre left function, to recenter after turning left
 void recenter_left(void){
+    
+    up_counts = 0;
+    up_flag = 1;
+    
     while(RD3 == 0){
         forward();
-        __delay_ms(100);
-        right = right + 100;
+        __delay_ms(50);
     }
+    
+     right = right + ((up_counts/20)*19);
+    
     stop(); // stop the car for standby period then recentre the car
-    __delay_ms(300);
+    
+    up_counts = 0;
+    up_flag = 0;
+    
+    __delay_ms(500);
+    
     turn_right(); // turn the car right so now it has the same reference 
     
 }
 
 // recentre right function, to recentere the car after turning right
 void recenter_right(void){
+    
+    up_counts = 0;
+    up_flag = 1;
+    
     while(RD2 == 0){
         forward();
-        __delay_ms(100);
-        left = left + 100;
+        __delay_ms(50);
     }
-    stop(); // standby period 
-    __delay_ms(300);
+    
+    left = left + ((up_counts/20)*19);
+    
+    stop(); // standby period
+    
+    up_counts = 0;
+    up_flag = 0;
+    
+    __delay_ms(500);
+    
     turn_left(); // turn the car left so now it has the same reference as before
 }
 
@@ -235,10 +293,20 @@ void avoid(void){
     
     //if both sensors are blocked, then to move backward till a path open
     if(RD2 == 0 && RD3 == 0){
+        back_counts = 0;
+        back_flag = 1;
         // to go back till find an open path
         while(RD2 == 0 && RD3 == 0){
-            back_off();
+            reverse();
         }
+        
+        stop();
+        __delay_ms(500);
+        
+        up = up + ((back_counts/20)*19);
+        back_counts = 0;
+        back_flag = 0;
+        
         // it go out of the loop when a path is open, so to check which path is open
         // if the right path is open, then turn right and recenter right
         if(RD3 == 1){
@@ -246,7 +314,7 @@ void avoid(void){
             recenter_right();
         }
         // if the left path is open, then turn left and recenter left
-        if(RD2 == 1){
+        else {
             turn_left();
             recenter_left();
         }
@@ -296,26 +364,36 @@ void main(void) {
     set_DC_right(270);
     
     while(1){
-        //set_DC(200);
-        dist = cal_dist();
-        if(dist < 10)
-            avoid();
-        else 
+        while(start == 1){
             forward();
-        __delay_ms(50);
-      /*  __delay_ms(1000);
-       // set_DC(75);
-        reverse();
-        __delay_ms(1000);
-       // set_DC(50);
-        stop();
-        __delay_ms(1000);
-       // set_DC(25);
-        turn_right();
-        __delay_ms(1000);
-       // set_DC(0);
-        turn_left();
-        __delay_ms(1000); */
+            up_counts = 0;
+            up_flag = 1;
+            __delay_ms(50);
+            up = up - ((up_counts/20)*19);
+            up_counts = 0;
+            forward_dist = cal_dist();
+            if(forward_dist <= 10){
+                up_flag = 0;
+                avoid();
+            }
+            if(up < 5 && left < 5 && right < 5){
+                start = 0;
+                stop();
+            }
+            else if(up < 5){
+                    if(left > right){
+                        up = left - right;
+                        turn_left();
+                    }
+                    if(right > left){
+                        up = right - left;
+                        turn_right();
+                    }
+                    right = 0;
+                    left = 0;
+            }
+            
+        }
     }
     return;
 }
@@ -324,10 +402,22 @@ void __interrupt() ISR(void){
     
     // to check that it is port B change interrupt
     if(RBIF == 1){
-        if(RB4 == 1) // to check if it is the right wheel
-            right_encoder = right_encoder + 1; // increment the right var, holding how many holes passed through encoder
-        if(RB5 == 1) // to check if it is the left wheel 
-            left_encoder = left_encoder + 1; // increment the left var, holding how many holes passed through encoder
+        // to check if it is the right wheel
+        if(RB4 == 1){
+            //right_encoder = right_encoder + 1; // increment the right var, holding how many holes passed through encoder
+            if(up_flag == 1)
+                up_counts = up_counts + 1;
+            if(back_flag)
+                back_counts = back_counts + 1;
+            if(turn_flag == 1)
+                turn_counts = turn_counts + 1;
+        }
+        // to check if it is the left wheel 
+        if(RB5 == 1){
+            //left_encoder = left_encoder + 1; // increment the left var, holding how many holes passed through encoder
+            if(turn_flag == 1)
+                turn_counts = turn_counts + 1;
+        }
         RBIF = 0; // reset the interrupt flag
     }
 }
