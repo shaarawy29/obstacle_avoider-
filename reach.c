@@ -9,7 +9,7 @@
 #pragma config FOSC = HS        // Oscillator Selection bits (XT oscillator)
 #pragma config WDTE = OFF        // Watchdog Timer Enable bit (WDT enabled)
 #pragma config PWRTE = OFF      // Power-up Timer Enable bit (PWRT disabled)
-#pragma config BOREN = ON       // Brown-out Reset Enable bit (BOR enabled)
+#pragma config BOREN = OFF       // Brown-out Reset Enable bit (BOR enabled)
 #pragma config LVP = ON         // Low-Voltage (Single-Supply) In-Circuit Serial Programming Enable bit (RB3/PGM pin has PGM function; low-voltage programming enabled)
 #pragma config CPD = OFF        // Data EEPROM Memory Code Protection bit (Data EEPROM code protection off)
 #pragma config WRT = OFF        // Flash Program Memory Write Enable bits (Write protection off; all program memory may be written to by EECON control)
@@ -31,15 +31,15 @@ int start = 0; // when zero thus no location is defined so car no move, when 1 t
 int reach = 0; // when 1 then the car has reached the location and it must stop, initially it is zero
 int test_pwm = 0;
 
-int up_counts; // var to store how many holes of the shaft were counted at each iteration of the main loop
-int up_flag;
+int up_counts = 0; // var to store how many holes of the shaft were counted at each iteration of the main loop
+int up_flag = 0;
 
-int back_counts; // var to store how many holes of the shaft were counted while going back off
-int back_flag; // var to tell whether we are moving back or not 
-int back_dist; // var to store how far we went back 
+int back_counts = 0; // var to store how many holes of the shaft were counted while going back off
+int back_flag = 0; // var to tell whether we are moving back or not 
+int back_dist = 0; // var to store how far we went back 
 
-int turn_counts; // var to hold how many holes of the shaft were counted while turning (right or left)
-int turn_flag; // flag to tell whether we are truning or not
+int turn_counts = 0; // var to hold how many holes of the shaft were counted while turning (right or left)
+int turn_flag = 0; // flag to tell whether we are truning or not
 
 // functions decleration  
 void PWM_Init(void);
@@ -326,12 +326,16 @@ void main(void) {
     
     // enable port B change interrupt to track the distance using optical encoder
     GIE = 1; // enable general interrupt 
+    
     RBIE = 1; // enable port B change interrupt
     RBIF = 0; // to reset the flag of the interrupt
-    
-    TRISB4 = 1; // set RB4 as input pin, to be connected to the right wheel encoder
+    //TRISB4 = 1; // set RB4 as input pin, to be connected to the right wheel encoder
     TRISB5 = 1; // set RB5 as input pin, to be connected to the left wheel encoder
     
+    INTF = 0; //clear interrupt flag bit
+    INTE = 1;
+    INTEDG = 1;
+    TRISB0 = 1;
     
     // ultra sonic pins configuration 
     TRISD5 = 0; //Trigger pin of US sensor is sent as output pin
@@ -357,6 +361,9 @@ void main(void) {
     //PORTC =0;
     // pin for the forward IR sensor 
     //TRISD4 = 1; //q forward IR sensor, if low then object in fron of the car
+    
+    TRISB1 = 0; // test led 
+    RB1 = 0;
   
     PWM_Init();
     set_DC(240);
@@ -364,7 +371,7 @@ void main(void) {
     set_DC_right(270);
     
     while(1){
-        while(start == 1){
+       /* while(start == 1){
             forward();
             up_counts = 0;
             up_flag = 1;
@@ -393,25 +400,30 @@ void main(void) {
                     left = 0;
             }
             
-        }
+        } */
+        
+        turn_right();
+        RB1 = ~RB1;
+        __delay_ms(1000);
     }
     return;
 }
 
 void __interrupt() ISR(void){
     
+    if(INTF == 1){
+        //right_encoder = right_encoder + 1; // increment the right var, holding how many holes passed through encoder
+        if(up_flag == 1)
+            up_counts = up_counts + 1;
+        else if(back_flag == 1)
+            back_counts = back_counts + 1;
+        else if(turn_flag == 1)
+            turn_counts = turn_counts + 1;
+        INTF=0;
+    }
+    
     // to check that it is port B change interrupt
     if(RBIF == 1){
-        // to check if it is the right wheel
-        if(RB4 == 1){
-            //right_encoder = right_encoder + 1; // increment the right var, holding how many holes passed through encoder
-            if(up_flag == 1)
-                up_counts = up_counts + 1;
-            if(back_flag)
-                back_counts = back_counts + 1;
-            if(turn_flag == 1)
-                turn_counts = turn_counts + 1;
-        }
         // to check if it is the left wheel 
         if(RB5 == 1){
             //left_encoder = left_encoder + 1; // increment the left var, holding how many holes passed through encoder
