@@ -38,8 +38,11 @@ int back_counts = 0; // var to store how many holes of the shaft were counted wh
 int back_flag = 0; // var to tell whether we are moving back or not 
 int back_dist = 0; // var to store how far we went back 
 
-int turn_counts = 0; // var to hold how many holes of the shaft were counted while turning (right or left)
-int turn_flag = 0; // flag to tell whether we are truning or not
+int turn_right_counts = 0; // var to hold how many holes of the shaft were counted while turning (right or left)
+int turn_right_flag = 0; // flag to tell whether we are truning or not
+
+int turn_left_counts = 0;
+int turn_left_flag = 0;
 
 // functions decleration  
 void PWM_Init(void);
@@ -192,13 +195,13 @@ void turn_left(void){
     RC4=1; RC5=0; //Motor 1 forward (right motor)
     RC6=0; RC7=0; //Motor 2 stop (left motor)
     
-    turn_counts = 0;
-    turn_flag = 1;
+    turn_left_counts = 0;
+    turn_left_flag = 1;
     
-    while(turn_counts < 20); 
+    while(turn_left_counts < 20); 
     
-    turn_counts = 0;
-    turn_flag = 0;
+    turn_left_flag = 0;
+    turn_left_counts = 0;
   
     stop(); // stop the car, standby period
     __delay_ms(500);
@@ -210,13 +213,13 @@ void turn_right(void){
     RC4=0; RC5=0; //Motor 1 stop (right motor)
     RC6=1; RC7=0; //Motor 2 forward (left motor)
    
-    turn_counts = 0;
-    turn_flag = 1;
+    turn_right_counts = 0;
+    turn_right_flag = 1;
     
-    while(turn_counts < 20);
+    while(turn_right_counts < 20);
     
-    turn_counts = 0;
-    turn_flag = 0;
+    turn_right_counts = 0;
+    turn_right_flag = 0;
     
     stop(); // stop the car, just standby period
     __delay_ms(500);
@@ -332,8 +335,8 @@ void main(void) {
     //TRISB4 = 1; // set RB4 as input pin, to be connected to the right wheel encoder
     TRISB5 = 1; // set RB5 as input pin, to be connected to the left wheel encoder
     
-    INTF = 0; //clear interrupt flag bit
     INTE = 1;
+    INTF = 0; //clear interrupt flag bit
     INTEDG = 1;
     TRISB0 = 1;
     
@@ -366,9 +369,9 @@ void main(void) {
     RB1 = 0;
   
     PWM_Init();
-    set_DC(240);
-    PWM_right_init();
-    set_DC_right(270);
+    set_DC(330);
+    //PWM_right_init();
+    //set_DC_right(270);
     
     while(1){
        /* while(start == 1){
@@ -402,9 +405,10 @@ void main(void) {
             
         } */
         
-        turn_right();
+        turn_left();
+        __delay_ms(3000);
         RB1 = ~RB1;
-        __delay_ms(1000);
+        
     }
     return;
 }
@@ -417,18 +421,18 @@ void __interrupt() ISR(void){
             up_counts = up_counts + 1;
         else if(back_flag == 1)
             back_counts = back_counts + 1;
-        else if(turn_flag == 1)
-            turn_counts = turn_counts + 1;
+        else if(turn_left_flag == 1)
+            turn_left_counts = turn_left_counts + 1;
         INTF=0;
     }
     
     // to check that it is port B change interrupt
     if(RBIF == 1){
         // to check if it is the left wheel 
-        if(RB5 == 1){
+        if(RB5 == 0){
             //left_encoder = left_encoder + 1; // increment the left var, holding how many holes passed through encoder
-            if(turn_flag == 1)
-                turn_counts = turn_counts + 1;
+            if(turn_right_flag == 1)
+                turn_right_counts = turn_right_counts + 1;
         }
         RBIF = 0; // reset the interrupt flag
     }
