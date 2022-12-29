@@ -45,6 +45,12 @@ int turn_right_flag = 0; // flag to tell whether we are truning or not
 int turn_left_counts = 0;
 int turn_left_flag = 0;
 
+int speed_right;
+int speed_left;
+
+int dc_right = 250;
+int dc_left = 240;
+
 // functions decleration  
 void PWM_Init(void);
 void PWM_right_init(void);
@@ -424,9 +430,9 @@ void main(void) {
   
     tmr1_init();
     PWM_Init();
-    set_DC(250);
+    set_DC(dc_left);
     PWM_right_init();
-    set_DC_right(240);
+    set_DC_right(dc_right);
     
     
     UART_RX_Init(); // Initialize The UART in Master Mode @ 9600bps
@@ -437,7 +443,7 @@ void main(void) {
             up_flag = 1;
             forward();
             __delay_ms(50);
-            up = up - up_counts;
+            up = up - up_counts ;
             up_counts = 0;
             up_flag = 0;
             //forward_dist = cal_dist();
@@ -486,6 +492,28 @@ void __interrupt() ISR(void){
             back_counts = back_counts + 1;
         else if(turn_left_flag == 1)
             turn_left_counts = turn_left_counts + 1;
+        
+        /*if (up_flag == 1 | back_flag == 1){
+            speed_right = speed_right + 1;
+            if(speed_right > speed_left){
+                dc_left = dc_left + 2;
+                dc_right = dc_right - 2;
+                if(dc_left < 230)
+                    dc_left = 230;
+                if(dc_left > 250)
+                    dc_left = 250;
+                if(dc_right < 230)
+                    dc_right = 230;
+                if(dc_right > 250)
+                    dc_right = 250;
+                set_DC(dc_left);
+                set_DC_right(dc_right);
+            }
+        }
+        else {
+            speed_right = 0;
+            speed_left = 0;
+        } */
         INTF=0;
     }
     
@@ -497,6 +525,29 @@ void __interrupt() ISR(void){
             if(turn_right_flag == 1)
                 turn_right_counts = turn_right_counts + 1;
         }
+        
+        /*if (up_flag == 1 | back_flag == 1){
+            speed_left = speed_left + 1;
+            if(speed_left > speed_right){
+                dc_left = dc_left - 2;
+                dc_right = dc_right + 2;
+                if(dc_left < 230)
+                    dc_left = 230;
+                if(dc_left > 250)
+                    dc_left = 250;
+                if(dc_right < 230)
+                    dc_right = 230;
+                if(dc_right > 250)
+                    dc_right = 250;
+                set_DC(dc_left);
+                set_DC_right(dc_right);
+            }
+        }
+        else {
+            speed_right = 0;
+            speed_left = 0;
+        }
+        */
         RBIF = 0; // reset the interrupt flag
     }
     
