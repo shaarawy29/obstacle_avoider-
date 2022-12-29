@@ -33,6 +33,7 @@ int test_pwm = 0;
 
 int up_counts = 0; // var to store how many holes of the shaft were counted at each iteration of the main loop
 int up_flag = 0;
+int up_dist = 0;
 
 int back_counts = 0; // var to store how many holes of the shaft were counted while going back off
 int back_flag = 0; // var to tell whether we are moving back or not 
@@ -62,6 +63,34 @@ void reverse(void);
 void tmr1_init(void);
 int cal_dist(void);
 
+//********************************************************************************
+//--------------------------------
+// Functions Declarations
+void UART_RX_Init(void);
+// Globals
+uint8_t UART_Buffer = 0;
+//--------------------------------
+
+// Functions Definitions
+ 
+void UART_RX_Init()
+{
+  BRGH = 1; // Set For High-Speed Baud Rate
+  SPBRG = 103; // Set The Baud Rate To Be 9600 bps
+  // Enable The Ascynchronous Serial Port
+  SYNC = 0;
+  SPEN = 1;
+  // Set The RX-TX Pins to be in UART mode (not io)
+  TRISC6 = 1; // As stated in the datasheet
+  TRISC7 = 1; // As stated in the datasheet
+  //--[ Enable UART Receiving Interrupts ]--
+  RCIE = 1; // UART Receving Interrupt Enable Bit
+  PEIE = 1; // Peripherals Interrupt Enable Bit
+  GIE = 1; // Global Interrupt Enable Bit
+  //------------------
+  CREN = 1; // Enable Data Continous Reception
+}
+ //****************************************************************************************
 
 // function initialization 
 
@@ -137,11 +166,11 @@ int cal_dist(void){
   __delay_us(10);
   RD5 = 0;
   // Wait For The Echo Pulse From The Sensor
-  while(!RD6);
+  while(!RD4);
   // Turn ON Timer Module
   TMR1ON = 1;
   // Wait Until The Pulse Ends
-  while(RD6);
+  while(RD4);
   // Turn OFF The Timer
   TMR1ON=0;
   // Calculate The Distance Using The Equation
@@ -153,13 +182,13 @@ int cal_dist(void){
 // forward function 
 void forward(void){
     RC4=1; RC5=0; //Motor 1 forward (right motor)
-    RC6=1; RC7=0; //Motor 2 forward (left motor)
+    RD6=1; RD7=0; //Motor 2 forward (left motor)
 }
 
 //reverse function
 void reverse(void){
     RC4=0; RC5=1; //Motor 1 reverse (right motor)
-    RC6=0; RC7=1; //Motor 2 reverse (left motor)
+    RD6=0; RD7=1; //Motor 2 reverse (left motor)
 }
 
 // back_off function initialiation 
@@ -169,7 +198,7 @@ void back_off(void){
     back_dist = 0;
     back_flag = 1;
     
-    while(back_dist < 10){
+    while(back_dist < 5){
         __delay_ms(50);
         back_dist = (back_counts/20)*19;
     }
@@ -180,20 +209,20 @@ void back_off(void){
     back_counts = 0;
     
     stop(); // stop the car
-    __delay_ms(500); // stop the car, just standby period
+    __delay_ms(1000); // stop the car, just standby period
 }
 
 // stop function to stop the car
 void stop(void){
     RC4 = 0; RC5 = 0; // Motor 1 stop (right motor)
-    RC6=0; RC7=0; //Motor 2 stop (left motor)
+    RD6=0; RD7=0; //Motor 2 stop (left motor)
 }
 
 //turn left function 
 void turn_left(void){
     
     RC4=1; RC5=0; //Motor 1 forward (right motor)
-    RC6=0; RC7=0; //Motor 2 stop (left motor)
+    RD6=0; RD7=0; //Motor 2 stop (left motor)
     
     turn_left_counts = 0;
     turn_left_flag = 1;
@@ -204,14 +233,14 @@ void turn_left(void){
     turn_left_counts = 0;
   
     stop(); // stop the car, standby period
-    __delay_ms(500);
+    __delay_ms(1000);
 }
 
 // turn right function 
 void turn_right(void){
     
     RC4=0; RC5=0; //Motor 1 stop (right motor)
-    RC6=1; RC7=0; //Motor 2 forward (left motor)
+    RD6=1; RD7=0; //Motor 2 forward (left motor)
    
     turn_right_counts = 0;
     turn_right_flag = 1;
@@ -222,7 +251,7 @@ void turn_right(void){
     turn_right_flag = 0;
     
     stop(); // stop the car, just standby period
-    __delay_ms(500);
+    __delay_ms(1000);
 }
 
 // recentre left function, to recenter after turning left
@@ -230,6 +259,18 @@ void recenter_left(void){
     
     up_counts = 0;
     up_flag = 1;
+    up_dist = 0;
+    
+    while(up_dist < 10){
+        forward();
+        up_dist = (up_counts/20)*19;
+    }
+    
+    right = right + up_dist;
+    
+    up_counts = 0;
+    up_flag = 1;
+    up_dist = 0;
     
     while(RD3 == 0){
         forward();
@@ -242,8 +283,9 @@ void recenter_left(void){
     
     up_counts = 0;
     up_flag = 0;
+    up_dist = 0;
     
-    __delay_ms(500);
+    __delay_ms(1000);
     
     turn_right(); // turn the car right so now it has the same reference 
     
@@ -254,6 +296,18 @@ void recenter_right(void){
     
     up_counts = 0;
     up_flag = 1;
+    up_dist = 0;
+    
+    while(up_dist < 10){
+        forward();
+        up_dist = (up_counts/20)*19;
+    }
+    
+    left = left + up_dist;
+    
+    up_counts = 0;
+    up_flag = 1;
+    up_dist = 0;
     
     while(RD2 == 0){
         forward();
@@ -267,7 +321,7 @@ void recenter_right(void){
     up_counts = 0;
     up_flag = 0;
     
-    __delay_ms(500);
+    __delay_ms(1000);
     
     turn_left(); // turn the car left so now it has the same reference as before
 }
@@ -281,21 +335,21 @@ void avoid(void){
     }
     
     // if right sensor is blocked then turn left
-    if(RD2 == 1 && RD3 == 0){
+    else if(RD2 == 1 && RD3 == 0){
         back_off();
         turn_left();
         recenter_left();
     }
     
     // if both sensors are open then to turn right, although turn left will also do the job
-    if(RD2 == 1 && RD3 == 1){
+    else if(RD2 == 1 && RD3 == 1){
         back_off();
         turn_right();
         recenter_right();
     }
     
     //if both sensors are blocked, then to move backward till a path open
-    if(RD2 == 0 && RD3 == 0){
+    else if(RD2 == 0 && RD3 == 0){
         back_counts = 0;
         back_flag = 1;
         // to go back till find an open path
@@ -304,7 +358,7 @@ void avoid(void){
         }
         
         stop();
-        __delay_ms(500);
+        __delay_ms(1000);
         
         up = up + ((back_counts/20)*19);
         back_counts = 0;
@@ -343,8 +397,8 @@ void main(void) {
     // ultra sonic pins configuration 
     TRISD5 = 0; //Trigger pin of US sensor is sent as output pin
     RD5 = 0; // initially zero
-    TRISD6 = 1; //Echo pin of US sensor is set as input pin
-    RD6 = 0;
+    TRISD4 = 1; //Echo pin of US sensor is set as input pin
+    RD4 = 0;
     
     
    // IR sensors pins configuration 
@@ -356,34 +410,37 @@ void main(void) {
     
     // pins configuration for the motors 
     TRISC4 = 0; TRISC5 = 0; //Motor 1 (right motor) pins declared as output, Rc4=> in1 Rc5=> in2
-    TRISC6 = 0; TRISC7 = 0; //Motor 2 (left motor) pins declared as output, Rc6 => in3 Rc7 =>in4
+    TRISD6 = 0; TRISD7 = 0; //Motor 2 (left motor) pins declared as output, Rc6 => in3 Rc7 =>in4
     RC4 = 0;
     RC5 = 0;
-    RC6 = 0;
-    RC7 = 0;
+    RD6 = 0;
+    RD7 = 0;
     //PORTC =0;
     // pin for the forward IR sensor 
     //TRISD4 = 1; //q forward IR sensor, if low then object in fron of the car
     
-    TRISD1 = 0; // test led 
+    TRISD1 = 1; // front IR sensor 
     RD1 = 0;
   
+    tmr1_init();
     PWM_Init();
-    set_DC(270);
+    set_DC(260);
     PWM_right_init();
-    set_DC_right(257);
+    set_DC_right(258);
+    
+    
+    UART_RX_Init(); // Initialize The UART in Master Mode @ 9600bps
     
     while(1){
-        /*while(start == 1){
-            RD1 = ~RD1;
-            forward();
+       /* while(start == 1){
             up_counts = 0;
             up_flag = 1;
+            forward();
             __delay_ms(50);
             up = up - ((up_counts/20)*19);
             up_counts = 0;
-            forward_dist = cal_dist();
-            if(forward_dist <= 10){
+            //forward_dist = cal_dist();
+            if(RD1 == 0){
                 up_flag = 0;
                 avoid();
             }
@@ -405,6 +462,7 @@ void main(void) {
             }
             
         } */
+        
        /* RD1 = ~RD1;
         __delay_ms(2000);
         forward();
@@ -417,14 +475,20 @@ void main(void) {
         __delay_ms(2000);
         turn_left();
         __delay_ms(2000); */
-        forward_dist = cal_dist();
-        if(forward_dist < 10)
+        
+       /* forward_dist = cal_dist();
+        if(forward_dist < 5)
             avoid();
         else 
             forward();
-        __delay_ms(50);
+        __delay_ms(100); */
         
-        
+       /* while(RD1 == 1)
+            forward();
+        stop();
+        __delay_ms(1000);
+        avoid();
+        */
     }
     return;
 }
@@ -452,4 +516,28 @@ void __interrupt() ISR(void){
         }
         RBIF = 0; // reset the interrupt flag
     }
+    
+    //*******************************************************************
+    if (RCIF == 1)
+  {
+    UART_Buffer = RCREG; // Read The Received Data Buffer
+ 
+    // This could have been done within the main loop. Since it's not
+    // Excessive processing, so it's OK to do it here below
+    if(UART_Buffer == 49){
+        //up = 150;
+        //left = 100;
+        //right = 0;
+        forward();
+    }
+    if(UART_Buffer == 50){
+        //up = 150;
+        //left = 0;
+        //right = 0;
+        reverse();
+    }
+    //start = 1;
+    RCIF = 0; // Clear The Interrupt Flag
+  }
+    //******************************************************************************
 }
