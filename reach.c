@@ -45,12 +45,6 @@ int turn_right_flag = 0; // flag to tell whether we are truning or not
 int turn_left_counts = 0;
 int turn_left_flag = 0;
 
-int speed_right;
-int speed_left;
-
-int dc_right = 250;
-int dc_left = 240;
-
 // functions decleration  
 void PWM_Init(void);
 void PWM_right_init(void);
@@ -233,7 +227,7 @@ void turn_left(void){
     turn_left_counts = 0;
     turn_left_flag = 1;
     
-    while(turn_left_counts < 20); 
+    while(turn_left_counts < 21); 
     
     turn_left_flag = 0;
     turn_left_counts = 0;
@@ -251,7 +245,7 @@ void turn_right(void){
     turn_right_counts = 0;
     turn_right_flag = 1;
     
-    while(turn_right_counts < 20);
+    while(turn_right_counts < 21);
     
     turn_right_counts = 0;
     turn_right_flag = 0;
@@ -427,12 +421,14 @@ void main(void) {
     
     TRISD1 = 1; // front IR sensor 
     RD1 = 0;
+    TRISD0 = 1; // another front IR sensor 
+    RD0 = 0;
   
     tmr1_init();
     PWM_Init();
-    set_DC(dc_left);
+    set_DC(260);
     PWM_right_init();
-    set_DC_right(dc_right);
+    set_DC_right(260);
     
     
     UART_RX_Init(); // Initialize The UART in Master Mode @ 9600bps
@@ -443,11 +439,11 @@ void main(void) {
             up_flag = 1;
             forward();
             __delay_ms(50);
-            up = up - up_counts ;
+            up = up - up_counts;
             up_counts = 0;
             up_flag = 0;
             //forward_dist = cal_dist();
-            if(RD1 == 0){
+            if(RD1 == 0 | RD0 == 0){
                 //up_flag = 0;
                 stop();
                 __delay_ms(1000);
@@ -492,28 +488,6 @@ void __interrupt() ISR(void){
             back_counts = back_counts + 1;
         else if(turn_left_flag == 1)
             turn_left_counts = turn_left_counts + 1;
-        
-        /*if (up_flag == 1 | back_flag == 1){
-            speed_right = speed_right + 1;
-            if(speed_right > speed_left){
-                dc_left = dc_left + 2;
-                dc_right = dc_right - 2;
-                if(dc_left < 230)
-                    dc_left = 230;
-                if(dc_left > 250)
-                    dc_left = 250;
-                if(dc_right < 230)
-                    dc_right = 230;
-                if(dc_right > 250)
-                    dc_right = 250;
-                set_DC(dc_left);
-                set_DC_right(dc_right);
-            }
-        }
-        else {
-            speed_right = 0;
-            speed_left = 0;
-        } */
         INTF=0;
     }
     
@@ -525,29 +499,6 @@ void __interrupt() ISR(void){
             if(turn_right_flag == 1)
                 turn_right_counts = turn_right_counts + 1;
         }
-        
-        /*if (up_flag == 1 | back_flag == 1){
-            speed_left = speed_left + 1;
-            if(speed_left > speed_right){
-                dc_left = dc_left - 2;
-                dc_right = dc_right + 2;
-                if(dc_left < 230)
-                    dc_left = 230;
-                if(dc_left > 250)
-                    dc_left = 250;
-                if(dc_right < 230)
-                    dc_right = 230;
-                if(dc_right > 250)
-                    dc_right = 250;
-                set_DC(dc_left);
-                set_DC_right(dc_right);
-            }
-        }
-        else {
-            speed_right = 0;
-            speed_left = 0;
-        }
-        */
         RBIF = 0; // reset the interrupt flag
     }
     
@@ -559,15 +510,15 @@ void __interrupt() ISR(void){
     // This could have been done within the main loop. Since it's not
     // Excessive processing, so it's OK to do it here below
     if(UART_Buffer == 49){
-        up = 150;
-        left = 100;
-        right = 0;
+        up = 840;
+        left = 0;
+        right = 160;
         //forward();
     }
     if(UART_Buffer == 50){
-        up = 0;
+        up = 160;
         left = 0;
-        right = 0;
+        right = 840;
         //reverse();
     }
     start = 1;
