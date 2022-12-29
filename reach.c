@@ -424,71 +424,54 @@ void main(void) {
   
     tmr1_init();
     PWM_Init();
-    set_DC(260);
+    set_DC(250);
     PWM_right_init();
-    set_DC_right(258);
+    set_DC_right(240);
     
     
     UART_RX_Init(); // Initialize The UART in Master Mode @ 9600bps
     
     while(1){
-       /* while(start == 1){
+        while(start == 1){
             up_counts = 0;
             up_flag = 1;
             forward();
             __delay_ms(50);
-            up = up - ((up_counts/20)*19);
+            up = up - up_counts;
             up_counts = 0;
+            up_flag = 0;
             //forward_dist = cal_dist();
             if(RD1 == 0){
-                up_flag = 0;
+                //up_flag = 0;
+                stop();
+                __delay_ms(1000);
                 avoid();
             }
-            if(up < 5 && left < 5 && right < 5){
+            if((up < 5) & (left < 5) & (right < 5)){
                 start = 0;
                 stop();
             }
             else if(up < 5){
                     if(left > right){
                         up = left - right;
+                        stop();
+                        __delay_ms(1000);
+                        //up_flag = 0;
                         turn_left();
                     }
                     if(right > left){
                         up = right - left;
+                        stop();
+                        __delay_ms(1000);
+                        //up_flag = 0;
                         turn_right();
                     }
                     right = 0;
                     left = 0;
             }
             
-        } */
+        } 
         
-       /* RD1 = ~RD1;
-        __delay_ms(2000);
-        forward();
-        __delay_ms(2000);
-        stop();
-        __delay_ms(1000);
-        back_off();
-        __delay_ms(2000);
-        turn_right();
-        __delay_ms(2000);
-        turn_left();
-        __delay_ms(2000); */
-        
-       /* forward_dist = cal_dist();
-        if(forward_dist < 5)
-            avoid();
-        else 
-            forward();
-        __delay_ms(100); */
-        
-       /* while(RD1 == 1)
-            forward();
-        stop();
-        __delay_ms(1000);
-        avoid();
-        */
     }
     return;
 }
@@ -525,18 +508,18 @@ void __interrupt() ISR(void){
     // This could have been done within the main loop. Since it's not
     // Excessive processing, so it's OK to do it here below
     if(UART_Buffer == 49){
-        //up = 150;
-        //left = 100;
-        //right = 0;
-        forward();
+        up = 150;
+        left = 100;
+        right = 0;
+        //forward();
     }
     if(UART_Buffer == 50){
-        //up = 150;
-        //left = 0;
-        //right = 0;
-        reverse();
+        up = 0;
+        left = 0;
+        right = 0;
+        //reverse();
     }
-    //start = 1;
+    start = 1;
     RCIF = 0; // Clear The Interrupt Flag
   }
     //******************************************************************************
